@@ -1,7 +1,7 @@
 // Vista de jefes: preparación, juego en vivo y resultado final.
 import {
   ROLE_NAMES, ROLE_ICON, ROLE_HELP, ROLES, SPECIAL_ROLES, STATUS_NAMES, CAUSE_NAMES,
-  esc, fmtDown, fmtUp, fmtClock, gameTime, serverNow, api, newId, lsGet, lsSet, rememberGame,
+  esc, fmtDown, fmtUp, fmtDur, fmtClock, gameTime, serverNow, api, newId, lsGet, lsSet, rememberGame,
   beep, unlockAudio, vibrate, toast, copyText, renderQr, download, jefeLink, publicLink, shareBlock,
 } from './common.js';
 
@@ -454,12 +454,13 @@ export function startJefe(root, code, token) {
           <li>${ROLES.filter((r) => vw.counts[r]).map((r) => `${vw.counts[r]} ${ROLE_NAMES[r]}`).join(' · ')}</li>
           <li>Seña de lobo: ${vw.signs.lobo ? esc(vw.signs.lobo) : '<i>sin definir</i>'}</li>
           <li>Seña de cazador: ${vw.signs.cazador ? esc(vw.signs.cazador) : '<i>sin definir</i>'}</li>
-          <li>Juego ${vw.config.gameMs / 60000} min · ronda máx. ${vw.config.roundMs / 60000} min · debate ${vw.config.debateMs / 60000} min</li>
+          <li>Juego de ${fmtDur(vw.config.gameMs)} · rondas de ${fmtDur(vw.config.roundMs)} · debate de ${fmtDur(vw.config.debateMs)}</li>
         </ul>
         ${errs.length ? `<div class="banner bad">${errs.map(esc).join('<br>')}</div>` : ''}
         ${vw.warnings.length ? `<div class="banner warn"><ul>${vw.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}
         <button class="btn primary xxl" data-act="start" ${errs.length ? 'disabled' : ''}>▶ Iniciar juego</button>
       </section>
+      ${timesForm()}
       <div class="actions"><button class="btn" data-act="setStep" data-n="4">← Atrás</button></div>`;
     }
     return `<h1 class="title">Preparación</h1>${stepper}${body}`;
@@ -472,10 +473,10 @@ export function startJefe(root, code, token) {
     const c = vw.config;
     const roundClock =
       r.stage === 'ronda'
-        ? `<span class="big" data-timer data-end="${r.startGt + c.roundMs}" data-over="roundOver"></span>`
+        ? `<span class="big" data-timer data-end="${r.startGt + c.roundMs}" data-warn="${c.roundWarnMs}" data-over="roundOver"></span>`
         : `<span class="big sm">${ASSEMBLY_STEPS[r.assembly.step]}</span>`;
     return `<section class="clocks card ${vw.paused ? 'paused' : ''}">
-      <div class="clock"><span class="lbl">Juego</span><span class="big" data-timer data-end="${c.gameMs}"></span></div>
+      <div class="clock"><span class="lbl">Juego</span><span class="big" data-timer data-end="${c.gameMs}" data-warn="${c.gameWarnMs}"></span></div>
       <div class="clock"><span class="lbl">${r.stage === 'ronda' ? `Ronda ${r.n}` : `Asamblea R${r.n}`}</span>${roundClock}</div>
       <div class="clock"><span class="lbl">Bote</span><span class="big">🪙 ${vw.pot}</span></div>
       ${vw.paused ? '<div class="paused-tag">⏸ EN PAUSA</div>' : ''}
@@ -558,7 +559,7 @@ export function startJefe(root, code, token) {
               <button class="btn primary" data-act="bet" data-team="${t.id}">Apostar</button></div></div>`;
           })
           .join('')}
-        <button class="btn primary xl" data-act="step" data-to="debate">Iniciar debate (${vw.config.debateMs / 60000} min) →</button>`;
+        <button class="btn primary xl" data-act="step" data-to="debate">Iniciar debate (${fmtDur(vw.config.debateMs)}) →</button>`;
     } else if (a.step === 'debate') {
       body = `<div class="center"><p class="lbl">Debate</p><p class="huge" data-timer data-end="${a.debateStartGt + vw.config.debateMs}"></p></div>
         <button class="btn primary xl" data-act="step" data-to="votacion">Pasar a votación →</button>`;
@@ -592,7 +593,7 @@ export function startJefe(root, code, token) {
     return `${clocks()}
       ${witchBanners()}
       ${whistleBanner()}
-      <div id="roundOver" class="banner warn hidden"><b>⏰ Asamblea obligatoria:</b> la ronda llegó a ${vw.config.roundMs / 60000} minutos.</div>
+      <div id="roundOver" class="banner warn hidden"><b>⏰ Asamblea obligatoria:</b> la ronda llegó a ${fmtDur(vw.config.roundMs)}.</div>
       ${invocationStatus()}
       ${r.stage === 'asamblea' ? assemblyCard() : ''}
       <div class="grid4">
@@ -846,6 +847,7 @@ export function startJefe(root, code, token) {
     const last = lastUndoable();
     return `<section class="card"><h2>⏸ Pausa</h2>
         ${vw.phase === 'juego' ? `<button class="btn xl ${vw.paused ? 'primary' : ''}" data-act="${vw.paused ? 'resume' : 'pause'}">${vw.paused ? '▶ Reanudar juego' : '⏸ Pausar juego'}</button>` : '<p class="muted">El juego no está en curso.</p>'}</section>
+      ${vw.phase === 'juego' ? timesForm() : ''}
       <section class="card"><h2>↩️ Deshacer</h2>
         ${last ? `<p>Última acción: <b>${esc(last.text)}</b> <span class="muted">(${esc(last.by)})</span></p><button class="btn danger xl" data-act="undo">Deshacer la última acción</button>` : '<p class="muted">No hay nada que deshacer.</p>'}
         <p class="muted small">Se deshace en orden, de la más reciente hacia atrás, y queda registrado en la bitácora.</p></section>
@@ -853,6 +855,23 @@ export function startJefe(root, code, token) {
       <section class="card"><h2>📤 Exportar</h2><div class="btnrow"><button class="btn" data-act="export">Descargar JSON</button><button class="btn" data-act="go" data-screen="imprimir">Resumen imprimible</button></div></section>
       ${vw.phase === 'juego' ? `<section class="card"><h2>🏁 Terminar juego</h2><p class="muted small">Termina ahora. Si quedan lobos vivos, ganan los lobos (como si se acabara el tiempo).</p><button class="btn danger" data-act="end">Terminar juego ahora</button></section>` : ''}
       <section class="card"><button class="btn" data-act="go" data-screen="compartir">🔗 Enlaces para compartir</button> <button class="btn" data-act="go" data-screen="nombre">👤 Cambiar mi nombre</button></section>`;
+  }
+
+  function timesForm() {
+    const c = S.view.config;
+    const min = (ms) => +(ms / 60000).toFixed(2);
+    const field = (id, label, val, hint) => `<label class="lbl" for="${id}">${label}</label>
+      <div class="row-input"><input id="${id}" class="input" type="number" inputmode="decimal" min="0" step="0.5" value="${min(val)}"><span class="muted">min</span></div>
+      ${hint ? `<p class="muted small">${hint}</p>` : ''}`;
+    return `<section class="card"><h2>⏱ Tiempos</h2>
+      <p class="muted small">En minutos; puedes usar fracciones (0.5 = 30 segundos).${S.view.phase === 'juego' ? ' Los cambios aplican de inmediato en todos los teléfonos.' : ''}</p>
+      ${field('tm-juego', 'Duración del juego', c.gameMs)}
+      ${field('tm-ronda', 'Duración máxima de cada ronda', c.roundMs, 'Al llegar a este tiempo sin asamblea: “Asamblea obligatoria”.')}
+      ${field('tm-debate', 'Tiempo de debate', c.debateMs)}
+      ${field('tm-avjuego', 'Avisar cuando quede del juego', c.gameWarnMs, 'Pon 0 para no avisar.')}
+      ${field('tm-avronda', 'Avisar cuando quede de la ronda', c.roundWarnMs, 'Pon 0 para no avisar.')}
+      <button class="btn primary xl" data-act="saveTimes">Guardar tiempos</button>
+    </section>`;
   }
 
   function screenCompartir() {
@@ -931,7 +950,7 @@ export function startJefe(root, code, token) {
       const txt = fmtDown(rem);
       if (el.textContent !== txt) el.textContent = txt;
       el.classList.toggle('zero', rem <= 0);
-      el.classList.toggle('low', rem > 0 && rem <= 60000);
+      el.classList.toggle('low', rem > 0 && rem <= Number(el.dataset.warn ?? 60000));
       if (el.dataset.over) document.getElementById(el.dataset.over)?.classList.toggle('hidden', rem > 0);
       if (rem <= 0 && el.dataset.refresh !== undefined && !el.dataset.polled) {
         el.dataset.polled = '1';
@@ -957,12 +976,12 @@ export function startJefe(root, code, token) {
             body: d.status === 'salvada' ? 'La bruja salvó a la víctima. Se cerró la ventana.' : 'Se cerró la ventana de la bruja.',
             strong: true,
           });
-        out.push({ key: `ronda1-${r.n}`, at: r.startGt + c.roundMs - 60000, title: '⏳ Queda 1 minuto de ronda' });
-        out.push({ key: `ronda8-${r.n}`, at: r.startGt + c.roundMs, title: '⏰ Asamblea obligatoria', body: `La ronda llegó a ${c.roundMs / 60000} minutos. Toquen el silbato.`, strong: true });
+        if (c.roundWarnMs) out.push({ key: `ronda1-${r.n}-${c.roundMs}-${c.roundWarnMs}`, at: r.startGt + c.roundMs - c.roundWarnMs, title: `⏳ Queda${c.roundWarnMs > 60000 ? 'n' : ''} ${fmtDur(c.roundWarnMs)} de ronda` });
+        out.push({ key: `ronda8-${r.n}-${c.roundMs}`, at: r.startGt + c.roundMs, title: '⏰ Asamblea obligatoria', body: `La ronda llegó a ${fmtDur(c.roundMs)}. Toquen el silbato.`, strong: true });
       }
       if (r.stage === 'asamblea' && r.assembly.step === 'debate') out.push({ key: `debate-${r.n}`, at: r.assembly.debateStartGt + c.debateMs, title: '🗳️ Terminó el debate', body: 'Pasen a la votación.' });
       for (const i of vw.invocations) if (i.status === 'en_curso') out.push({ key: `inv-${i.id}`, at: i.startGt + c.invokeMs, title: '👻 Terminó la invocación', soft: true });
-      out.push({ key: 'juego1', at: c.gameMs - 60000, title: '⏳ Queda 1 minuto de juego', strong: true });
+      if (c.gameWarnMs) out.push({ key: `juego1-${c.gameMs}-${c.gameWarnMs}`, at: c.gameMs - c.gameWarnMs, title: `⏳ Queda${c.gameWarnMs > 60000 ? 'n' : ''} ${fmtDur(c.gameWarnMs)} de juego`, strong: true });
     } else if (vw.phase === 'fin' && S.sawPlaying) {
       out.push({ key: 'fin', at: -1, title: vw.final.winner === 'lobos' ? '🏁 Fin del juego: ganan los lobos' : '🏁 Fin del juego: ganan los aldeanos', body: vw.final.reason, strong: true });
     }
@@ -1041,6 +1060,10 @@ export function startJefe(root, code, token) {
       if (S.view.players.some((p) => p.role) && !confirmAsk('¿Volver a repartir? Se reemplazan todos los roles actuales.')) return;
       if (await act('asignarRoles', {}, { okMsg: 'Roles repartidos.' })) S.dealIdx = 0;
     },
+    saveTimes() {
+      const n = (id) => val(id).replace(',', '.').trim();
+      act('tiempos', { juego: n('tm-juego'), ronda: n('tm-ronda'), debate: n('tm-debate'), avisoJuego: n('tm-avjuego'), avisoRonda: n('tm-avronda') }, { okMsg: 'Tiempos guardados.' });
+    },
     roleMode(el) {
       S.roleMode = el.dataset.mode;
       lsSet('lobos-modo-roles', S.roleMode);
@@ -1100,7 +1123,12 @@ export function startJefe(root, code, token) {
       if (r) setStep(5);
     },
     async start() {
-      if (!confirmAsk('¿Iniciar el juego? Arranca el cronómetro de 60 minutos en todos los teléfonos.')) return;
+      // Si cambiaron los tiempos y no los guardaron, se guardan antes de iniciar.
+      const c = S.view.config;
+      const n = (id) => Number(val(id).replace(',', '.'));
+      const changed = [['tm-juego', c.gameMs], ['tm-ronda', c.roundMs], ['tm-debate', c.debateMs], ['tm-avjuego', c.gameWarnMs], ['tm-avronda', c.roundWarnMs]].some(([id, ms]) => Math.round(n(id) * 60) * 1000 !== ms);
+      if (changed && !(await act('tiempos', { juego: n('tm-juego'), ronda: n('tm-ronda'), debate: n('tm-debate'), avisoJuego: n('tm-avjuego'), avisoRonda: n('tm-avronda') }))) return;
+      if (!confirmAsk(`¿Iniciar el juego? Arranca el cronómetro de ${fmtDur(S.view.config.gameMs)} en todos los teléfonos.`)) return;
       if (await act('iniciar', {}, { okMsg: '¡Comenzó el juego!' })) {
         S.screen = 'panel';
         render();

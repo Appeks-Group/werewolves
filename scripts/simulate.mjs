@@ -158,6 +158,7 @@ function randomAction(v) {
     if (r < 0.8) return { type: 'asamblea' };
     if (r < 0.84) return { type: v.paused ? 'reanudar' : 'pausa' };
     if (r < 0.85) return { type: 'nota', payload: { text: 'Nota de prueba' } };
+    if (r < 0.852) return { type: 'tiempos', payload: { juego: pick([20, 45, 60, 90]), ronda: pick([3, 5, 8]), debate: pick([1, 5]), avisoJuego: pick([0, 1, 5]), avisoRonda: pick([0, 1, 2]) } };
     if (r < 0.853) return { type: 'terminar' };
     return { type: pick(['paso', 'apuesta', 'votacion', 'nuevaRonda', 'iniciar', 'setup']), payload: {} }; // inválidas a propósito
   }
@@ -262,13 +263,13 @@ for (let g = 0; g < GAMES; g++) {
   }
   // Si no terminó, el tiempo lo termina (la pausa congela el reloj: primero se reanuda)
   if (state.phase === 'juego' && state.clock.pausedAt != null) {
-    const before = G.deriveView(state, t + 61 * 60_000);
+    const before = G.deriveView(state, t + state.config.gameMs + 60_000);
     assert(before.phase === 'juego', 'El tiempo corrió durante la pausa', { g });
     push('reanudar');
   }
-  const end = G.deriveView(state, t + 61 * 60_000);
+  const end = G.deriveView(state, t + state.config.gameMs + 60_000);
   assert(end.phase === 'fin', 'El juego no terminó al acabarse el tiempo', { g });
-  check(state, t + 61 * 60_000, g);
+  check(state, t + state.config.gameMs + 60_000, g);
   const reason = end.final.reason.startsWith('Se acabaron') ? 'tiempo' : end.final.reason.includes('mano') ? 'manual' : end.final.winner;
   stats.endings[reason] = (stats.endings[reason] || 0) + 1;
   stats.saves += end.deaths.filter((d) => d.status === 'salvada').length;

@@ -64,6 +64,7 @@ Cada `git push` a `main` vuelve a desplegar el sitio.
 3. **Preparación:** equipos → jugadores → roles → reparto en la tienda de roles → señas → iniciar.
    - **Con tarjetas (manual):** la app dice cuántas tarjetas de cada rol poner boca abajo en la mesa (las de la tabla, ajustables). Llama a cada jugador uno por uno. Tú tocas la tarjeta que sacó y la app descuenta las que quedan. Luego, en "Reparto", usa "Solo lobos" para que cada lobo vea a los demás y la seña.
    - **Automático:** la app reparte al azar las cantidades de la tabla entre todos los jugadores.
+   - **Tiempos** (en "Iniciar", y durante el juego en "Más"): duración del juego (5 a 300 min), duración máxima de la ronda, tiempo de debate y cuánto antes del final avisar en el juego y en la ronda (0 = sin aviso). Se aceptan fracciones de minuto (0.5 = 30 s).
 4. **Juego:** registrar muertes (con "Yo lo vi"), ventana de 1 minuto de la bruja, aviso de silbato, asamblea guiada (anuncio, apuestas, debate, votación y bote), chismoso, fila de invocación, pausa, deshacer y exportar.
 5. El final se detecta solo: ya no quedan lobos, los lobos igualan o superan a los aldeanos, o se acaba el tiempo. Ahí la app calcula los bonos y muestra el desglose.
 

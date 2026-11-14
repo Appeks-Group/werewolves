@@ -56,12 +56,12 @@ export function startPantalla(root, code, p) {
         vw.phase === 'fin'
           ? '<span class="big sm">Terminado</span>'
           : r.stage === 'ronda'
-            ? `<span class="big" data-timer data-end="${r.startGt + c.roundMs}"></span>`
+            ? `<span class="big" data-timer data-end="${r.startGt + c.roundMs}" data-warn="${c.roundWarnMs}"></span>`
             : r.assembly.step === 'debate'
               ? `<span class="big" data-timer data-end="${r.assembly.debateStartGt + c.debateMs}"></span>`
               : `<span class="big sm">${STEP[r.assembly.step]}</span>`;
       main = `<section class="clocks card pub ${vw.paused ? 'paused' : ''}">
-        <div class="clock"><span class="lbl">Juego</span><span class="big" data-timer data-end="${c.gameMs}"></span></div>
+        <div class="clock"><span class="lbl">Juego</span><span class="big" data-timer data-end="${c.gameMs}" data-warn="${c.gameWarnMs}"></span></div>
         <div class="clock"><span class="lbl">${r.stage === 'ronda' ? `Ronda ${r.n}` : `Asamblea · ronda ${r.n}${r.assembly.step === 'debate' ? ' · debate' : ''}`}</span>${roundBox}</div>
         <div class="clock"><span class="lbl">Bote</span><span class="big">🪙 ${vw.pot}</span></div>
         ${vw.paused ? '<div class="paused-tag">⏸ EN PAUSA</div>' : ''}
@@ -102,7 +102,7 @@ export function startPantalla(root, code, p) {
       const rem = Number(el.dataset.end) - g;
       el.textContent = fmtDown(rem);
       el.classList.toggle('zero', rem <= 0);
-      el.classList.toggle('low', rem > 0 && rem <= 60000);
+      el.classList.toggle('low', rem > 0 && rem <= Number(el.dataset.warn ?? 60000));
     });
   }
 

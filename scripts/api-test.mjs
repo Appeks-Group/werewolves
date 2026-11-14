@@ -74,6 +74,13 @@ const count = (r) => Object.values(roles).filter((x) => x === r).length;
 ok(count('lobo') === 2 && count('cazador') === 1 && count('chismoso') === 1 && count('martir') === 1 && count('bruja') === 1, 'Reparto según la tabla (14 jugadores: 2 lobos + 4 especiales)');
 ok(ar.data.view.warnings.length === 0, 'El reparto no tiene advertencias');
 await act('senas', { lobo: 'SENA-LOBO-SECRETA', cazador: 'SENA-CAZADOR-SECRETA' });
+const tBad = await act('tiempos', { juego: 45, ronda: 6, debate: 3, avisoJuego: 50, avisoRonda: 1 });
+ok(tBad.status === 400 && /aviso/.test(tBad.data.error), 'Tiempos: el aviso no puede ser mayor que la duración');
+const tOk = await act('tiempos', { juego: 45, ronda: 6, debate: 3, avisoJuego: 5, avisoRonda: 0.5 });
+const cfg = tOk.data.view?.config;
+ok(tOk.status === 200 && cfg.gameMs === 45 * 60000 && cfg.roundMs === 6 * 60000 && cfg.debateMs === 3 * 60000 && cfg.gameWarnMs === 5 * 60000 && cfg.roundWarnMs === 30000, 'Tiempos personalizados (45 min, rondas de 6, debate de 3, avisos de 5 min y 30 s)');
+const pc = (await req('GET', `/partidas/${G.code}/publica`, { pub: G.publicToken })).data.view.config;
+ok(pc.gameMs === 45 * 60000 && pc.roundWarnMs === 30000, 'La pantalla pública usa los mismos tiempos');
 ok((await act('iniciar')).status === 200, 'Iniciar juego');
 
 console.log('\n3. Escrituras simultáneas');

@@ -26,6 +26,13 @@ export function fmtUp(ms) {
   const t = Math.max(0, Math.floor(ms / 1000));
   return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
 }
+export function fmtDur(ms) {
+  const t = Math.round(ms / 1000);
+  const m = Math.floor(t / 60);
+  const s = t % 60;
+  if (!m) return `${s} s`;
+  return s ? `${m} min ${s} s` : `${m} min`;
+}
 export const fmtClock = (at) => (at ? new Date(at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '');
 
 export function gameTime(clock, now) {

@@ -121,6 +121,25 @@ form .btn.xl { margin-top: 12px; }
 .seg button.on { background: var(--forest); color: #fff; border-color: var(--forest); }
 .info { background: #f4f7f4; border-radius: 12px; padding: 12px; margin: 12px 0; }
 
+/* --- reparto con tarjetas */
+.seg.two { grid-template-columns: 1fr 1fr; margin: 6px 0; }
+.rolegrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.rolepick { display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 92px; border-radius: 14px; border: 3px solid var(--line); background: #f4f7f4; font: inherit; font-weight: 800; font-size: 1.05rem; color: var(--ink); cursor: pointer; padding: 8px; }
+.rolepick span { font-size: 1.9rem; }
+.rolepick small { font-weight: 600; color: var(--muted); }
+.rolepick:disabled { opacity: 0.35; }
+.rolepick.r-lobo { background: #2a1414; color: #fff; border-color: var(--red); }
+.rolepick.r-lobo small { color: #f1caca; }
+.rolepick.r-bruja { background: var(--purple-bg); border-color: var(--purple); }
+.rolepick.r-cazador { background: #fff2e0; border-color: var(--amber); }
+.rolepick.r-chismoso { background: #e6f0fb; border-color: var(--blue); }
+.rolepick.r-martir { background: #fff8d6; border-color: #c9a400; }
+.qty { display: flex; align-items: center; gap: 10px; }
+.qty b { min-width: 22px; text-align: center; font-size: 1.15rem; }
+.mini { width: 40px; height: 40px; border-radius: 10px; border: 2px solid var(--line); background: #fff; font: inherit; font-size: 1.3rem; font-weight: 800; cursor: pointer; color: var(--ink); }
+.mini:disabled { opacity: 0.35; }
+details.card summary { cursor: pointer; min-height: 32px; }
+
 /* --- cronómetros */
 .clocks { display: grid; grid-template-columns: 1.2fr 1.2fr 0.8fr; gap: 6px; text-align: center; position: relative; }
 .clock { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

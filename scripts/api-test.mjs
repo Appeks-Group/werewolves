@@ -58,6 +58,15 @@ teams.forEach((t, i) => {
   for (let k = 0; k < size; k++) players.push({ id: `p${i}${k}`, name: `${t.name.slice(0, 3)}-${k + 1}`, teamId: t.id });
 });
 ok((await act('setup', { teams, players })).status === 200, 'Guardar equipos y 14 jugadores');
+const bad = await act('mazo', { counts: { lobo: 2, cazador: 2, chismoso: 1, martir: 1, bruja: 1, aldeano: 7 } });
+ok(bad.status === 400 && /una tarjeta/.test(bad.data.error), 'Mazo: no permite 2 tarjetas de cazador');
+const mz = await act('mazo', { counts: { lobo: 3, cazador: 1, chismoso: 1, martir: 1, bruja: 1, aldeano: 6 } });
+ok(mz.status === 200 && mz.data.view.deck.lobo === 3 && mz.data.view.deckCustom, 'Mazo personalizado de tarjetas');
+const m1 = await act('rol', { playerId: 'p00', role: 'lobo' });
+ok(m1.status === 200 && m1.data.view.players.find((p) => p.id === 'p00').role === 'lobo', 'Registrar a mano la tarjeta de un jugador');
+const m2 = await act('rol', { playerId: 'p00', role: null });
+ok(m2.status === 200 && m2.data.view.players.find((p) => p.id === 'p00').role === null, 'Quitar el rol de un jugador');
+ok((await act('mazo', { counts: null })).data.view.deckCustom === false, 'Volver a las tarjetas de la tabla');
 const ar = await act('asignarRoles');
 ok(ar.status === 200, 'Reparto automático de roles');
 const roles = Object.fromEntries(ar.data.view.players.map((p) => [p.id, p.role]));

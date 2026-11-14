@@ -26,6 +26,9 @@ export function startJefe(root, code, token) {
     dealIdx: 0,
     dealShown: false,
     deathCause: 'lobo',
+    roleMode: lsGet('lobos-modo-roles', 'tarjetas'),
+    cardSkip: new Set(),
+    dealWolves: false,
     lastGossip: null,
     online: true,
     busy: false,
@@ -334,32 +337,84 @@ export function startJefe(root, code, token) {
     } else if (S.setupStep === 2) {
       const rec = vw.recommended;
       const cnt = vw.counts;
+      const deck = vw.deck;
       const hasRoles = vw.players.some((p) => p.role);
+      const mode = S.roleMode;
+      const warnBox = vw.warnings.length
+        ? `<div class="banner warn"><b>Advertencias:</b><ul>${vw.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>`
+        : hasRoles && vw.players.every((p) => p.role)
+          ? '<p class="ok-text">✓ Todos tienen rol y el reparto cumple las restricciones.</p>'
+          : '';
+      let main;
+      if (mode === 'auto') {
+        main = `<section class="card">
+          <p>${n} jugadores. Reparto recomendado por la tabla:</p>
+          <table class="tbl"><tr><th>Rol</th><th>Tabla</th><th>Actual</th></tr>
+          ${ROLES.map((r) => `<tr class="${hasRoles && rec[r] !== cnt[r] ? 'diff' : ''}"><td>${ROLE_ICON[r]} ${ROLE_NAMES[r]}</td><td>${rec[r]}</td><td>${cnt[r]}</td></tr>`).join('')}
+          </table>
+          <button class="btn primary xl" data-act="autoRoles" ${n ? '' : 'disabled'}>🎲 ${hasRoles ? 'Volver a repartir' : 'Repartir automáticamente'}</button>
+          ${warnBox}</section>`;
+      } else {
+        const left = (r) => deck[r] - cnt[r];
+        const total = ROLES.reduce((a, r) => a + deck[r], 0);
+        const deckCard = `<section class="card"><h3>🃏 Tarjetas en la mesa</h3>
+          <p class="muted">Pon estas tarjetas boca abajo. Por defecto son las de la tabla para ${n} jugadores; ajústalas si quieres.</p>
+          <table class="tbl deck"><tr><th>Rol</th><th>Tarjetas</th><th>Tabla</th><th>Quedan</th></tr>
+          ${ROLES.map(
+            (r) => `<tr class="${deck[r] !== rec[r] ? 'diff' : ''}"><td>${ROLE_ICON[r]} ${ROLE_NAMES[r]}</td>
+            <td class="qty"><button class="mini" data-act="deck" data-r="${r}" data-d="-1" ${deck[r] <= 0 ? 'disabled' : ''} aria-label="Una tarjeta menos">−</button><b>${deck[r]}</b><button class="mini" data-act="deck" data-r="${r}" data-d="1" ${SPECIAL_ROLES.includes(r) && deck[r] >= 1 ? 'disabled' : ''} aria-label="Una tarjeta más">＋</button></td>
+            <td class="num">${rec[r]}</td><td class="num"><b>${Math.max(0, left(r))}</b></td></tr>`,
+          ).join('')}
+          <tr><td><b>Total</b></td><td class="num"><b class="${total === n ? 'ok-text' : 'bad-text'}">${total}</b></td><td class="num">${n}</td><td class="num">${vw.players.filter((p) => !p.role).length}</td></tr>
+          </table>
+          ${vw.deckCustom ? '<button class="btn ghost" data-act="deckReset">↺ Usar las de la tabla</button>' : ''}</section>`;
+        const order = vw.teams.flatMap((t) => vw.players.filter((p) => p.teamId === t.id));
+        const pending = order.filter((p) => !p.role);
+        const next = pending.find((p) => !S.cardSkip.has(p.id)) || pending[0];
+        const caller = !n
+          ? '<section class="card"><p>Primero captura a los jugadores.</p></section>'
+          : !next
+            ? '<section class="card center"><p class="big-text ok-text">✓ Todos sacaron su tarjeta.</p></section>'
+            : `<section class="card caller center"><p class="muted">Llamen a la mesa a:</p>
+              <p class="deal-name">${esc(next.name)}</p><p class="muted">${tname(next.teamId)} · faltan ${pending.length} de ${n}</p>
+              <p><b>¿Qué tarjeta sacó?</b></p>
+              <div class="rolegrid">${ROLES.map(
+                (r) => `<button class="rolepick r-${r}" data-act="pick" data-id="${next.id}" data-r="${r}" ${left(r) <= 0 ? 'disabled' : ''}>
+                  <span>${ROLE_ICON[r]}</span>${ROLE_NAMES[r]}<small>quedan ${Math.max(0, left(r))}</small></button>`,
+              ).join('')}</div>
+              ${pending.length > 1 ? `<button class="btn ghost" data-act="skipCard" data-id="${next.id}">Saltar: llamar a otra persona</button>` : ''}
+            </section>`;
+        main = `${caller}${deckCard}${warnBox}`;
+      }
+      const list = hasRoles
+        ? `<details class="card"><summary><b>Ver o corregir asignaciones</b> <span class="muted small">(muestra los roles)</span></summary>
+          ${vw.teams
+            .map(
+              (t) => `<h4>${esc(t.name)}</h4>${vw.players
+                .filter((p) => p.teamId === t.id)
+                .map(
+                  (p) => `<div class="row-input"><span class="pname">${esc(p.name)}</span>
+                <select id="rs-${p.id}" class="input" data-fresh data-change="role" data-id="${p.id}"><option value="" ${p.role ? '' : 'selected'}>— sin rol —</option>${ROLES.map((r) => `<option value="${r}" ${p.role === r ? 'selected' : ''}>${ROLE_ICON[r]} ${ROLE_NAMES[r]}</option>`).join('')}</select></div>`,
+                )
+                .join('')}`,
+            )
+            .join('')}</details>`
+        : '';
       body = `<section class="card"><h2>3. Roles</h2>
         ${S.dirty ? '<p class="banner warn">Tienes cambios sin guardar en equipos o jugadores. Vuelve a esos pasos y guarda.</p>' : ''}
-        <p>${n} jugadores. Reparto recomendado por la tabla:</p>
-        <table class="tbl"><tr><th>Rol</th><th>Tabla</th><th>Actual</th></tr>
-        ${ROLES.map((r) => `<tr class="${hasRoles && rec[r] !== cnt[r] ? 'diff' : ''}"><td>${ROLE_ICON[r]} ${ROLE_NAMES[r]}</td><td>${rec[r]}</td><td>${cnt[r]}</td></tr>`).join('')}
-        </table>
-        <button class="btn primary xl" data-act="autoRoles" ${n ? '' : 'disabled'}>🎲 ${hasRoles ? 'Volver a repartir' : 'Repartir automáticamente'}</button>
-        ${vw.warnings.length ? `<div class="banner warn"><b>Advertencias:</b><ul>${vw.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>` : hasRoles ? '<p class="ok-text">✓ El reparto cumple todas las restricciones.</p>' : ''}
+        <div class="seg two">
+          <button class="${mode === 'tarjetas' ? 'on' : ''}" data-act="roleMode" data-mode="tarjetas">🃏 Con tarjetas</button>
+          <button class="${mode === 'auto' ? 'on' : ''}" data-act="roleMode" data-mode="auto">🎲 Automático</button>
+        </div>
+        <p class="muted small">${mode === 'tarjetas' ? 'Cada jugador saca una tarjeta oculta de la mesa y tú registras cuál le tocó.' : 'La app reparte respetando máximo 1 lobo y 1 rol de aldea por equipo.'}</p>
       </section>
-      ${hasRoles ? `<section class="card"><h3>Ajuste manual</h3><p class="muted">Cambia el rol de cualquier jugador.</p>
-        ${vw.teams
-          .map(
-            (t) => `<h4>${esc(t.name)}</h4>${vw.players
-              .filter((p) => p.teamId === t.id)
-              .map(
-                (p) => `<div class="row-input"><span class="pname">${esc(p.name)}</span>
-              <select id="rs-${p.id}" class="input" data-fresh data-change="role" data-id="${p.id}">${ROLES.map((r) => `<option value="${r}" ${p.role === r ? 'selected' : ''}>${ROLE_ICON[r]} ${ROLE_NAMES[r]}</option>`).join('')}${p.role ? '' : '<option value="" selected>—</option>'}</select></div>`,
-              )
-              .join('')}`,
-          )
-          .join('')}</section>` : ''}
+      ${main}${list}
       <div class="actions"><button class="btn" data-act="setStep" data-n="1">← Atrás</button><button class="btn primary xl" data-act="setStep" data-n="3" ${hasRoles ? '' : 'disabled'}>Seguir →</button></div>`;
     } else if (S.setupStep === 3) {
-      const list = vw.teams.flatMap((t) => vw.players.filter((p) => p.teamId === t.id));
-      if (!list.length) body = '<section class="card"><p>Primero captura a los jugadores.</p></section>';
+      const list = vw.teams.flatMap((t) => vw.players.filter((p) => p.teamId === t.id && (!S.dealWolves || p.role === 'lobo')));
+      const filter = `<div class="seg two"><button class="${S.dealWolves ? '' : 'on'}" data-act="dealWolves" data-v="0">Todos</button><button class="${S.dealWolves ? 'on' : ''}" data-act="dealWolves" data-v="1">🐺 Solo lobos</button></div>
+        <p class="muted small">Si repartiste con tarjetas, usa “Solo lobos” para que cada lobo vea quiénes son los otros lobos y la seña.</p>`;
+      if (!list.length) body = `<section class="card">${filter}<p>Todavía no hay a quién mostrar.</p></section>`;
       else {
         S.dealIdx = Math.min(S.dealIdx, list.length - 1);
         const p = list[S.dealIdx];
@@ -369,6 +424,7 @@ export function startJefe(root, code, token) {
         if (p.role === 'cazador' && vw.signs.cazador) extra = `<p>Seña de cazador: <b>${esc(vw.signs.cazador)}</b></p>`;
         body = `<section class="card deal">
           <h2>4. Reparto (tienda de roles)</h2>
+          ${filter}
           <p class="muted">Jugador ${S.dealIdx + 1} de ${list.length}. Enséñale el teléfono solo a esta persona.</p>
           <p class="deal-name">${esc(p.name)}</p><p class="muted">${tname(p.teamId)}</p>
           ${
@@ -985,12 +1041,51 @@ export function startJefe(root, code, token) {
       if (S.view.players.some((p) => p.role) && !confirmAsk('¿Volver a repartir? Se reemplazan todos los roles actuales.')) return;
       if (await act('asignarRoles', {}, { okMsg: 'Roles repartidos.' })) S.dealIdx = 0;
     },
+    roleMode(el) {
+      S.roleMode = el.dataset.mode;
+      lsSet('lobos-modo-roles', S.roleMode);
+      render();
+    },
+    deck(el) {
+      const counts = { ...S.view.deck };
+      counts[el.dataset.r] = Math.max(0, counts[el.dataset.r] + Number(el.dataset.d));
+      act('mazo', { counts });
+    },
+    deckReset() {
+      act('mazo', { counts: null });
+    },
+    async pick(el) {
+      const vw = S.view;
+      const p = P(el.dataset.id);
+      const role = el.dataset.r;
+      const mates = vw.players.filter((x) => x.teamId === p.teamId && x.id !== p.id);
+      let clash = null;
+      if (role === 'lobo' && mates.some((x) => x.role === 'lobo')) clash = 'ya tiene un lobo';
+      if (SPECIAL_ROLES.includes(role) && mates.some((x) => SPECIAL_ROLES.includes(x.role))) clash = 'ya tiene un rol de aldea';
+      if (clash && !confirmAsk(`${T(p.teamId).name} ${clash} (lo ideal es máximo 1 por equipo).\n\nAceptar = registrarlo así.\nCancelar = que devuelva la tarjeta y saque otra.`)) return;
+      if (await act('rol', { playerId: p.id, role }, { okMsg: `${p.name}: tarjeta registrada.` })) {
+        S.cardSkip.delete(p.id);
+        render();
+      }
+    },
+    skipCard(el) {
+      S.cardSkip.add(el.dataset.id);
+      const pending = S.view.players.filter((p) => !p.role);
+      if (pending.every((p) => S.cardSkip.has(p.id))) S.cardSkip.clear();
+      render();
+    },
+    dealWolves(el) {
+      S.dealWolves = el.dataset.v === '1';
+      S.dealIdx = 0;
+      S.dealShown = false;
+      render();
+    },
     dealShow() {
       S.dealShown = true;
       render();
     },
     dealNext() {
-      const total = S.view.players.length;
+      const total = S.view.players.filter((p) => !S.dealWolves || p.role === 'lobo').length;
       S.dealShown = false;
       if (S.dealIdx + 1 < total) S.dealIdx++;
       else {
@@ -1177,7 +1272,7 @@ export function startJefe(root, code, token) {
   });
   root.addEventListener('change', (e) => {
     const el = e.target.closest('[data-change="role"]');
-    if (el && el.value) act('rol', { playerId: el.dataset.id, role: el.value });
+    if (el) act('rol', { playerId: el.dataset.id, role: el.value || null });
   });
   root.addEventListener('input', (e) => {
     const el = e.target;

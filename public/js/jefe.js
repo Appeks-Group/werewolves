@@ -343,7 +343,7 @@ export function startJefe(root, code, token) {
       const warnBox = vw.warnings.length
         ? `<div class="banner warn"><b>Advertencias:</b><ul>${vw.warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>`
         : hasRoles && vw.players.every((p) => p.role)
-          ? '<p class="ok-text">✓ Todos tienen rol y el reparto cumple las restricciones.</p>'
+          ? '<p class="ok-text">✓ Todos tienen rol.</p>'
           : '';
       let main;
       if (mode === 'auto') {
@@ -406,7 +406,7 @@ export function startJefe(root, code, token) {
           <button class="${mode === 'tarjetas' ? 'on' : ''}" data-act="roleMode" data-mode="tarjetas">🃏 Con tarjetas</button>
           <button class="${mode === 'auto' ? 'on' : ''}" data-act="roleMode" data-mode="auto">🎲 Automático</button>
         </div>
-        <p class="muted small">${mode === 'tarjetas' ? 'Cada jugador saca una tarjeta oculta de la mesa y tú registras cuál le tocó.' : 'La app reparte respetando máximo 1 lobo y 1 rol de aldea por equipo.'}</p>
+        <p class="muted small">${mode === 'tarjetas' ? 'Cada jugador saca una tarjeta oculta de la mesa y tú registras cuál le tocó.' : 'La app reparte al azar las cantidades de la tabla entre todos los jugadores.'}</p>
       </section>
       ${main}${list}
       <div class="actions"><button class="btn" data-act="setStep" data-n="1">← Atrás</button><button class="btn primary xl" data-act="setStep" data-n="3" ${hasRoles ? '' : 'disabled'}>Seguir →</button></div>`;
@@ -1058,11 +1058,6 @@ export function startJefe(root, code, token) {
       const vw = S.view;
       const p = P(el.dataset.id);
       const role = el.dataset.r;
-      const mates = vw.players.filter((x) => x.teamId === p.teamId && x.id !== p.id);
-      let clash = null;
-      if (role === 'lobo' && mates.some((x) => x.role === 'lobo')) clash = 'ya tiene un lobo';
-      if (SPECIAL_ROLES.includes(role) && mates.some((x) => SPECIAL_ROLES.includes(x.role))) clash = 'ya tiene un rol de aldea';
-      if (clash && !confirmAsk(`${T(p.teamId).name} ${clash} (lo ideal es máximo 1 por equipo).\n\nAceptar = registrarlo así.\nCancelar = que devuelva la tarjeta y saque otra.`)) return;
       if (await act('rol', { playerId: p.id, role }, { okMsg: `${p.name}: tarjeta registrada.` })) {
         S.cardSkip.delete(p.id);
         render();

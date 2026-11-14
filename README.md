@@ -62,8 +62,8 @@ Cada `git push` a `main` vuelve a desplegar el sitio.
 1. **Portada → Crear partida.** Obtienes el **enlace de jefes** (`?g=CÓDIGO&t=TOKEN`), que se comparte por WhatsApp, copiando el enlace o con QR, y el **enlace de pantalla pública** (`?g=CÓDIGO&p=TOKEN`), de solo lectura.
 2. Cada jefe escribe su nombre una vez. Todo lo que registre queda firmado en la bitácora.
 3. **Preparación:** equipos → jugadores → roles → reparto en la tienda de roles → señas → iniciar.
-   - **Con tarjetas (manual):** la app dice cuántas tarjetas de cada rol poner boca abajo en la mesa (las de la tabla, ajustables). Llama a cada jugador uno por uno. Tú tocas la tarjeta que sacó y la app descuenta las que quedan. Si un equipo queda con 2 lobos o 2 roles de aldea, la app pregunta si lo registras así o si el jugador saca otra tarjeta. Luego, en "Reparto", usa "Solo lobos" para que cada lobo vea a los demás y la seña.
-   - **Automático:** la app reparte respetando máximo 1 lobo y 1 rol de aldea por equipo.
+   - **Con tarjetas (manual):** la app dice cuántas tarjetas de cada rol poner boca abajo en la mesa (las de la tabla, ajustables). Llama a cada jugador uno por uno. Tú tocas la tarjeta que sacó y la app descuenta las que quedan. Luego, en "Reparto", usa "Solo lobos" para que cada lobo vea a los demás y la seña.
+   - **Automático:** la app reparte al azar las cantidades de la tabla entre todos los jugadores.
 4. **Juego:** registrar muertes (con "Yo lo vi"), ventana de 1 minuto de la bruja, aviso de silbato, asamblea guiada (anuncio, apuestas, debate, votación y bote), chismoso, fila de invocación, pausa, deshacer y exportar.
 5. El final se detecta solo: ya no quedan lobos, los lobos igualan o superan a los aldeanos, o se acaba el tiempo. Ahí la app calcula los bonos y muestra el desglose.
 

@@ -72,7 +72,7 @@ ok(ar.status === 200, 'Reparto automático de roles');
 const roles = Object.fromEntries(ar.data.view.players.map((p) => [p.id, p.role]));
 const count = (r) => Object.values(roles).filter((x) => x === r).length;
 ok(count('lobo') === 2 && count('cazador') === 1 && count('chismoso') === 1 && count('martir') === 1 && count('bruja') === 1, 'Reparto según la tabla (14 jugadores: 2 lobos + 4 especiales)');
-ok(ar.data.view.warnings.length === 0, 'El reparto no tiene advertencias (máx. 1 lobo y 1 rol de aldea por equipo)');
+ok(ar.data.view.warnings.length === 0, 'El reparto no tiene advertencias');
 await act('senas', { lobo: 'SENA-LOBO-SECRETA', cazador: 'SENA-CAZADOR-SECRETA' });
 ok((await act('iniciar')).status === 200, 'Iniciar juego');
 

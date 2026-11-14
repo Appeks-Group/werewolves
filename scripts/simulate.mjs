@@ -221,13 +221,9 @@ for (let g = 0; g < GAMES; g++) {
   push('setup', { teams, players });
   push('asignarRoles');
   const auto = G.autoAssignRoles(teams, players.map((p) => ({ ...p })), rng);
-  // El reparto automático cumple las restricciones cuando hay suficientes equipos
-  const wolvesNeeded = G.recommendedRoles(players.length).lobo;
-  for (const tm of teams) {
-    const mem = players.filter((p) => p.teamId === tm.id);
-    const w = mem.filter((p) => auto.roles[p.id] === 'lobo').length;
-    if (wolvesNeeded <= teams.length) assert(w <= 1, 'El reparto puso 2 lobos en un equipo habiendo equipos libres', { g });
-  }
+  // El reparto automático usa exactamente las cantidades globales de la tabla
+  const rec = G.recommendedRoles(players.length);
+  for (const r of G.ROLES) assert(Object.values(auto.roles).filter((x) => x === r).length === rec[r], `El reparto automático no respeta la tabla para ${r}`, { g });
   if (chance(0.3)) push('rol', { playerId: pick(players).id, role: pick(G.ROLES) });
   push('senas', { lobo: 'tocarse la oreja', cazador: 'pistola con la mano' });
   if (!push('iniciar')) {

@@ -514,7 +514,7 @@ export function startJefe(root, code, token) {
     const r = vw.round;
     if (r.stage !== 'ronda') return '';
     if (vw.deaths.some((d) => d.status === 'pendiente')) return '';
-    const ds = vw.deaths.filter((d) => d.round === r.n && d.window);
+    const ds = vw.deaths.filter((d) => d.round === r.n && d.cause !== 'votacion');
     if (!ds.length) return '';
     const saved = ds.filter((d) => d.status === 'salvada').length;
     return `<section class="banner whistle"><b>📣 Toquen el silbato: asamblea</b>
@@ -651,7 +651,7 @@ export function startJefe(root, code, token) {
           : ''
       }
       <button class="btn danger xxl" data-act="submitDeath">Registrar muerte</button>
-      <p class="muted small">Al registrarla se abre la ventana de 1 minuto de la bruja en todos los teléfonos.</p>
+      <p class="muted small">${holder('bruja') ? `Al registrarla se abre la ventana de la bruja (${fmtDur(vw.config.witchMs)}) en todos los teléfonos.` : 'No hay bruja en esta partida: la muerte se confirma al instante.'}</p>
     </section>`;
   }
 
@@ -969,11 +969,11 @@ export function startJefe(root, code, token) {
       const c = vw.config;
       if (r.stage === 'ronda') {
         const anyPending = vw.deaths.some((d) => d.status === 'pendiente' && d.gt + c.witchMs > g);
-        for (const d of vw.deaths) if (d.window && d.round === r.n && !anyPending) out.push({
+        for (const d of vw.deaths) if (d.cause !== 'votacion' && d.round === r.n && !anyPending) out.push({
             key: `silbato-${d.id}`,
-            at: d.status === 'salvada' ? d.savedGt : d.gt + c.witchMs,
+            at: !d.window ? d.gt : d.status === 'salvada' ? d.savedGt : d.gt + c.witchMs,
             title: '📣 Toquen el silbato: asamblea',
-            body: d.status === 'salvada' ? 'La bruja salvó a la víctima. Se cerró la ventana.' : 'Se cerró la ventana de la bruja.',
+            body: !d.window ? 'Muerte confirmada.' : d.status === 'salvada' ? 'La bruja salvó a la víctima. Se cerró la ventana.' : 'Se cerró la ventana de la bruja.',
             strong: true,
           });
         if (c.roundWarnMs) out.push({ key: `ronda1-${r.n}-${c.roundMs}-${c.roundWarnMs}`, at: r.startGt + c.roundMs - c.roundWarnMs, title: `⏳ Queda${c.roundWarnMs > 60000 ? 'n' : ''} ${fmtDur(c.roundWarnMs)} de ronda` });
@@ -1150,7 +1150,7 @@ export function startJefe(root, code, token) {
         payload.seen = !!document.getElementById('m-seen')?.checked;
         if (!payload.seen) return toast('Solo cuenta si un jefe la vio: marca "Yo lo vi".', 'error');
       }
-      if (await act('muerte', payload, { okMsg: 'Muerte registrada. Corre la ventana de la bruja.' })) {
+      if (await act('muerte', payload, { okMsg: holder('bruja') ? 'Muerte registrada. Corre la ventana de la bruja.' : 'Muerte registrada y confirmada.' })) {
         S.screen = 'panel';
         render();
       }

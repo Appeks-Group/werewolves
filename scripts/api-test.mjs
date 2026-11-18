@@ -171,6 +171,24 @@ if (server) {
   ok(tv.find((t) => t.id === target.teamId).expelled.length === 1, 'El equipo del expulsado queda marcado (pierde integridad)');
 }
 
+console.log('\n7. Partida sin bruja: no hay ventana');
+{
+  const g2 = (await req('POST', '/partidas')).data;
+  const a2 = (type, payload = {}) => req('POST', `/partidas/${g2.code}/acciones`, { token: g2.token, body: { type, payload, by: 'Jefe Ana' } });
+  await a2('setup', { teams, players });
+  await a2('mazo', { counts: { lobo: 2, cazador: 1, chismoso: 1, martir: 1, bruja: 0, aldeano: 9 } });
+  const roleOf = ['lobo', 'lobo', 'cazador', 'chismoso', 'martir', ...Array(9).fill('aldeano')];
+  for (const [i, p] of players.entries()) await a2('rol', { playerId: p.id, role: roleOf[i] });
+  ok((await a2('iniciar')).status === 200, 'Inicia una partida sin bruja');
+  const d = await a2('muerte', { cause: 'lobo', byId: players[0].id, victimId: players[6].id, seen: true });
+  const dv = d.data.view;
+  ok(d.status === 200 && dv.deaths[0].status === 'confirmada' && !dv.deaths[0].window, 'La muerte se confirma al instante, sin ventana de la bruja');
+  ok(dv.players.find((p) => p.id === players[6].id).status === 'fantasma', 'La víctima pasa a fantasma de inmediato');
+  ok((await a2('asamblea')).status === 200, 'Se puede iniciar la asamblea sin esperar');
+  const pv2 = (await req('GET', `/partidas/${g2.code}/publica`, { pub: g2.publicToken })).data.view;
+  ok(pv2.players.find((p) => p.id === players[6].id).role === 'aldeano', 'La pantalla pública revela el rol de inmediato');
+}
+
 const exp = await req('GET', `/partidas/${G.code}/exportar`, { token: G.token });
 ok(exp.status === 200 && Array.isArray(exp.data.actions) && !JSON.stringify(exp.data).includes(G.token), 'Exportar JSON (sin el token)');
 

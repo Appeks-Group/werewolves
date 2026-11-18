@@ -40,6 +40,8 @@ function check(state, now, gameNo) {
   assert(saved.length <= 1, 'La bruja salvó más de una vez', ctx);
   assert(v.deaths.filter((d) => d.cause === 'bruja').length <= 1, 'La bruja mató más de una vez', ctx);
   for (const d of saved) assert(d.savedGt - d.gt < cfg.witchMs, 'La bruja salvó fuera de la ventana', ctx);
+  // Sin bruja no hay ventana: ninguna muerte queda pendiente
+  if (!v.players.some((p) => p.role === 'bruja')) assert(!v.deaths.some((d) => d.status === 'pendiente' || d.window), 'Ventana de la bruja sin bruja en la partida', ctx);
   // Lobos: una eliminación por lobo por ronda; nunca a otro lobo
   const wk = v.deaths.filter((d) => d.cause === 'lobo');
   assert(new Set(wk.map((d) => `${d.byId}-${d.round}`)).size === wk.length, 'Un lobo eliminó dos veces en una ronda', ctx);
@@ -226,6 +228,11 @@ for (let g = 0; g < GAMES; g++) {
   const rec = G.recommendedRoles(players.length);
   for (const r of G.ROLES) assert(Object.values(auto.roles).filter((x) => x === r).length === rec[r], `El reparto automático no respeta la tabla para ${r}`, { g });
   if (chance(0.3)) push('rol', { playerId: pick(players).id, role: pick(G.ROLES) });
+  if (chance(0.25)) {
+    // Partida sin bruja: su tarjeta se cambia por aldeano
+    const w = state.players.find((p) => p.role === 'bruja');
+    if (w) push('rol', { playerId: w.id, role: 'aldeano' });
+  }
   push('senas', { lobo: 'tocarse la oreja', cazador: 'pistola con la mano' });
   if (!push('iniciar')) {
     push('asignarRoles');
